@@ -3,6 +3,8 @@ package com.mirim.backend.controller;
 import com.mirim.backend.DTO.sign_up_DTO;
 import com.mirim.backend.Entity.User;
 import com.mirim.backend.service.User_Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -15,13 +17,9 @@ public class sign_up_controller {
         this.userService = userService;
     }
 
-    @GetMapping("/sign_up")
-    public String sign_up(){
-        return"안녕하세요";
-    }
-
     @PostMapping("/sign_up")
-    public void sign_up(@RequestBody User user){
+    public ResponseEntity<?> sign_up(@RequestBody User user){
         userService.createUser(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body("회원가입 성공");
     }
 }
