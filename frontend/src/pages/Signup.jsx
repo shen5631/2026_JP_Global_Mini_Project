@@ -49,7 +49,10 @@ export default function Signup() {
         </h1>
       )}
 
-      <ol className="signup__steps" aria-label="회원가입 단계">
+      <ol
+        className={`signup__steps signup__steps--${step}`}
+        aria-label="회원가입 단계"
+      >
         {[1, 2, 3].map((n) => (
           <li
             key={n}
@@ -274,6 +277,8 @@ const css = `
 
 /* 로고 (1단계에만) */
 .signup__logo {
+  display: flex;
+  justify-content: center;
   margin: 48px 0 0;
 }
 .signup__logo img {
@@ -434,4 +439,19 @@ const css = `
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+
+/* 현재 단계의 동그라미까지 채워지는 선 (동그라미 중심 간격 = 28px + 56px = 84px) */
+.signup__steps::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 1px;
+  width: var(--fill, 0);
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+.signup__steps--1 { --fill: calc(50% - 84px); }
+.signup__steps--2 { --fill: 50%; }
+.signup__steps--3 { --fill: calc(50% + 84px); }
 `;
