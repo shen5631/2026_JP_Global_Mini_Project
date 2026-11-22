@@ -102,7 +102,7 @@ public class User {
         this.userAge = userAge;
     }
 
-    public boolean isUserLocal() {
+    public boolean getUserLocal() {
         return userLocal;
     }
 

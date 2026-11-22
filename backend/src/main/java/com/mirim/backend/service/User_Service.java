@@ -1,5 +1,6 @@
 package com.mirim.backend.service;
 
+import com.mirim.backend.DTO.sign_in_DTO;
 import com.mirim.backend.DTO.sign_up_DTO;
 import com.mirim.backend.Entity.User;
 import com.mirim.backend.repository.User_Repository;
@@ -7,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.Optional;
 
 @Service
 public class User_Service {
@@ -41,5 +44,8 @@ public class User_Service {
         return userRepository.findByUserId(user_id).isEmpty();
     }
 
+    public Optional<User> sign_in(sign_in_DTO user){
+        return userRepository.findByUserId(user.userId()).filter(u -> passwordEncoder.matches(user.userPw(), u.getUserPw()));
+    }
 
 }

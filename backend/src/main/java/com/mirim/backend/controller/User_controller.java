@@ -36,9 +36,13 @@ public class User_controller {
         return ResponseEntity.status(HttpStatus.CONFLICT).body("아이디 중복 오류");
     }
 
-//    @PostMapping("/longin")
-//    public ResponseEntity<?> login(@RequestBody sign_in_DTO login_data){
-//        userService.login(login_data);
-//    }
+    @PostMapping("/longin")
+    public ResponseEntity<?> login(@RequestBody sign_in_DTO login_data){
+        if(userService.sign_in(login_data).isEmpty()){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("회원가입 실패");
+        }
+        User user = userService.sign_in(login_data).get();
+        return ResponseEntity.status(HttpStatus.OK).body(Map.of("accessToken","임시","userAi",user.getUserAi(),"userNickname",user.getUserNickname(),"userLocal",user.getUserLocal()));
+    }
 
 }
