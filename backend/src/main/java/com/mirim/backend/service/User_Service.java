@@ -1,18 +1,45 @@
 package com.mirim.backend.service;
 
+import com.mirim.backend.DTO.sign_up_DTO;
 import com.mirim.backend.Entity.User;
 import com.mirim.backend.repository.User_Repository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
 public class User_Service {
-    private User_Repository userRepository;
+    private final User_Repository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public User_Service(User_Repository userRepository) {
+    public User_Service(User_Repository userRepository, PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
     }
 
-    public User createUser(User user){
-        return userRepository.save(user);
+    public boolean createUser(sign_up_DTO user){
+        if(userRepository.existsByUserId(user.userId())){
+            return false;
+        }
+        User user1 = new User();
+        user1.setUserId(user.userId());
+        user1.setUserPw(passwordEncoder.encode(user.userPw()));
+        user1.setUserName(user.userName());
+        user1.setUserNickname(user.userNickname());
+        user1.setUserAge(user.userAge());
+        user1.setUserLocal(user.userLocal());
+        user1.setUserGender(user.userGender());
+        user1.setUserCountry(user.userCountry());
+        user1.setCategoryId(user.categoryId());
+
+        userRepository.save(user1);
+        return true;
     }
+
+    public boolean check_id(String user_id){
+        return userRepository.findByUserId(user_id).isEmpty();
+    }
+
+
 }
