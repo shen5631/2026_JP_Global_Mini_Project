@@ -1,6 +1,6 @@
 package com.mirim.backend.controller;
 
-import com.mirim.backend.DTO.check_id_DTO;
+import com.mirim.backend.DTO.sign_in_DTO;
 import com.mirim.backend.DTO.sign_up_DTO;
 import com.mirim.backend.Entity.User;
 import com.mirim.backend.service.User_Service;
@@ -22,8 +22,10 @@ public class User_controller {
 
     @PostMapping("/sign_up")
     public ResponseEntity<?> sign_up(@RequestBody sign_up_DTO user){
-        userService.createUser(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message","회원가입 성공"));
+        if(userService.createUser(user)){
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message","회원가입 성공"));
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body("아이디 오류");
     }
 
     @GetMapping("/check_id")
@@ -35,8 +37,8 @@ public class User_controller {
     }
 
 //    @PostMapping("/longin")
-//    public ResponseEntity<?> login(@RequestBody User login_data){
-//
+//    public ResponseEntity<?> login(@RequestBody sign_in_DTO login_data){
+//        userService.login(login_data);
 //    }
 
 }
