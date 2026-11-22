@@ -1,9 +1,11 @@
 package com.mirim.backend.service;
 
+import com.mirim.backend.DTO.check_id_DTO;
 import com.mirim.backend.DTO.sign_up_DTO;
 import com.mirim.backend.Entity.User;
 import com.mirim.backend.repository.User_Repository;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +34,10 @@ public class User_Service {
         user1.setUserGender(user.userGender());
 
         return userRepository.save(user1);
+    }
+
+    public boolean check_id(String user_id){
+        return userRepository.findByUserId(user_id).isEmpty();
     }
 
 
