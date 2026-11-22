@@ -12,10 +12,10 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false,name = "user_ai")
-    private Integer user_ai;
+    private Integer userAi;
     @Column(nullable = false,name = "user_id", length = 20, unique = true)
     private String userId;
-    @Column(nullable = false,name = "user_pw",length = 20)
+    @Column(nullable = false,name = "user_pw",length = 100)
     private String userPw;
     @Column(nullable = false,name = "user_name",length = 30)
     private String userName;
@@ -39,8 +39,8 @@ public class User {
 
     }
 
-    public User(Integer user_ai, String userId, String userPw, String userName, String userNickname, int userAge, boolean userLocal, String userCountry, String userGender, Integer categoryId, LocalDateTime userCreate) {
-        this.user_ai = user_ai;
+    public User(Integer userAi, String userId, String userPw, String userName, String userNickname, int userAge, boolean userLocal, String userCountry, String userGender, Integer categoryId, LocalDateTime userCreate) {
+        this.userAi = userAi;
         this.userId = userId;
         this.userPw = userPw;
         this.userName = userName;
@@ -53,12 +53,13 @@ public class User {
         this.userCreate = userCreate;
     }
 
-    public Integer getUser_ai() {
-        return user_ai;
+
+    public Integer getUserAi() {
+        return userAi;
     }
 
-    public void setUser_ai(Integer user_ai) {
-        this.user_ai = user_ai;
+    public void setUserAi(Integer userAi) {
+        this.userAi = userAi;
     }
 
     public String getUserId() {
