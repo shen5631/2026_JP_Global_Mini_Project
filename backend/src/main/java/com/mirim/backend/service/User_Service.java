@@ -1,5 +1,6 @@
 package com.mirim.backend.service;
 
+import com.mirim.backend.DTO.patch_me_DTO;
 import com.mirim.backend.DTO.sign_in_DTO;
 import com.mirim.backend.DTO.sign_up_DTO;
 import com.mirim.backend.Entity.User;
@@ -47,5 +48,9 @@ public class User_Service {
     public Optional<User> sign_in(sign_in_DTO user){
         return userRepository.findByUserId(user.userId()).filter(u -> passwordEncoder.matches(user.userPw(), u.getUserPw()));
     }
+
+//    public boolean patch_me(patch_me_DTO user){
+//
+//    }
 
 }
