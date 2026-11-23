@@ -33,7 +33,7 @@ export default function Login() {
 
         <div className="login__actions">
           <button type="button" className="login__next">
-            다음
+            로그인
           </button>
           <Link to="/signup">
             <button type="button" className="login__signup">

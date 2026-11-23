@@ -1,9 +1,16 @@
 import { useState } from "react";
 import logo from "../assets/Logo.svg";
 import backIcon from "../assets/Back.svg";
+import { checkId } from "../api/authApi";
 import { useNavigate } from "react-router";
-
 const TOTAL_STEPS = 3;
+
+const ID_MESSAGES = {
+  available: "사용 가능한 아이디예요.",
+  taken: "이미 사용 중인 아이디예요.",
+  invalid: "아이디 형식이 올바르지 않아요.",
+  error: "확인 중 문제가 생겼어요. 다시 시도해주세요.",
+};
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -17,7 +24,7 @@ export default function Signup() {
     nickname: "",
     gender: "여성",
     birth: "",
-    userType: "traveler", // 여행객 : traverler, 현지인 : local
+    userType: "traveler",
     country: "",
   });
 
@@ -26,9 +33,43 @@ export default function Signup() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const goNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
-  const goPrev = () => setStep((s) => Math.max(s - 1, 1));
-  const goLogin = () => navigate("/");
+  // 아이디 중복확인 결과. 아이디를 고치면 결과가 자동으로 무효가 돼요
+  const [idCheck, setIdCheck] = useState({ id: "", status: "idle" });
+  const [isChecking, setIsChecking] = useState(false);
+  const userId = form.id.trim();
+  const idStatus = idCheck.id === userId ? idCheck.status : "idle";
+
+  const handleCheckId = async () => {
+    if (!userId || isChecking) return;
+    setIsChecking(true);
+    try {
+      const status = await checkId(userId); // "available" | "taken" | "invalid"
+      setIdCheck({ id: userId, status });
+    } catch {
+      setIdCheck({ id: userId, status: "error" });
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  // 단계별로 모두 채워져야 "다음"이 활성화돼요
+  const canNext = {
+    1: idStatus === "available" && form.pw !== "" && form.pw === form.pwConfirm,
+    2:
+      form.name.trim() !== "" &&
+      form.nickname.trim() !== "" &&
+      form.gender !== "" &&
+      form.birth.length === 10,
+    3: form.userType !== "" && form.country !== "",
+  }[step];
+
+  const goNext = () => {
+    if (!canNext) return;
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  };
+  const goPrev = () => {
+    return step === 1 ? navigate("/") : setStep((s) => Math.max(s - 1, 1));
+  };
 
   return (
     <main className="signup">
@@ -38,7 +79,7 @@ export default function Signup() {
         type="button"
         className="signup__back"
         aria-label="이전"
-        onClick={step == 1 ? goLogin : goPrev} // 1단계 : 로그인 화면으로 이동, 2,3 단계 : 그 이전 단계 화면으로 이동
+        onClick={goPrev} // 1단계에서는 나중에 로그인 화면으로 이동하도록 연결
       >
         <img src={backIcon} alt="" />
       </button>
@@ -70,15 +111,39 @@ export default function Signup() {
           <div className="signup__fields">
             <div className="signup__field">
               <label htmlFor="signup-id">아이디</label>
-              <input
-                id="signup-id"
-                name="id"
-                type="text"
-                placeholder="이름을 입력해주세요"
-                autoComplete="username"
-                value={form.id}
-                onChange={handleChange}
-              />
+              <div className="signup__row">
+                <input
+                  id="signup-id"
+                  name="id"
+                  type="text"
+                  placeholder="이름을 입력해주세요"
+                  autoComplete="username"
+                  value={form.id}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className="signup__dup-btn"
+                  onClick={handleCheckId}
+                  disabled={!userId || isChecking || idStatus === "available"}
+                >
+                  {isChecking
+                    ? "확인 중"
+                    : idStatus === "available"
+                      ? "확인완료"
+                      : "중복확인"}
+                </button>
+              </div>
+              {idStatus !== "idle" && (
+                <p
+                  role="status"
+                  className={`signup__msg ${
+                    idStatus === "available" ? "" : "signup__msg--error"
+                  }`}
+                >
+                  {ID_MESSAGES[idStatus]}
+                </p>
+              )}
             </div>
             <div className="signup__field">
               <label htmlFor="signup-pw">비밀번호</label>
@@ -103,6 +168,11 @@ export default function Signup() {
                 value={form.pwConfirm}
                 onChange={handleChange}
               />
+              {form.pwConfirm !== "" && form.pw !== form.pwConfirm && (
+                <p className="signup__msg signup__msg--error">
+                  비밀번호가 일치하지 않아요.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -192,26 +262,26 @@ export default function Signup() {
                 여행객
               </label>
             </div>
-            {form.userType === "traveler" && (
-              <div className="signup__field">
-                <label htmlFor="signup-country">국가</label>
-                <select
-                  id="signup-country"
-                  name="country"
-                  className={`signup__select ${form.country === "" ? "is-empty" : ""}`}
-                  value={form.country}
-                  onChange={handleChange}
-                >
-                  <option value="" disabled>
-                    국가 선택
-                  </option>
-                  {/* 임시 목록이에요. 실제 국가 목록으로 교체해주세요 */}
-                  <option value="KR">대한민국</option>
-                  <option value="CN">중국</option>
-                  <option value="US">미국</option>
-                </select>
-              </div>
-            )}
+
+            <div className="signup__field">
+              <label htmlFor="signup-country">국가</label>
+              <select
+                id="signup-country"
+                name="country"
+                className={`signup__select ${form.country === "" ? "is-empty" : ""}`}
+                value={form.country}
+                onChange={handleChange}
+              >
+                <option value="" disabled>
+                  국가 선택
+                </option>
+                {/* 임시 목록이에요. 실제 국가 목록으로 교체해주세요 */}
+                <option value="KR">대한민국</option>
+                <option value="JP">일본</option>
+                <option value="CN">중국</option>
+                <option value="US">미국</option>
+              </select>
+            </div>
           </div>
         )}
 
@@ -229,6 +299,7 @@ export default function Signup() {
             type="button"
             className="signup__btn signup__btn--primary"
             onClick={goNext}
+            disabled={!canNext}
           >
             다음
           </button>
@@ -307,6 +378,20 @@ const css = `
   height: 1px;
   background: var(--primary-soft);
 }
+/* 현재 단계의 동그라미까지 채워지는 선 (동그라미 중심 간격 = 28px + 56px = 84px) */
+.signup__steps::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 1px;
+  width: var(--fill, 0);
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+.signup__steps--1 { --fill: calc(50% - 84px); }
+.signup__steps--2 { --fill: 50%; }
+.signup__steps--3 { --fill: calc(50% + 84px); }
 .signup__step {
   position: relative;
   z-index: 1;
@@ -316,11 +401,14 @@ const css = `
   height: 28px;
   border-radius: 50%;
   background: var(--primary-soft);
-  color: #ffffff;
+  color: var(--primary);
   font-size: 14px;
   font-weight: 700;
 }
-.signup__step--on { background: var(--primary); }
+.signup__step--on {
+  background: var(--primary);
+  color: #ffffff;
+}
 
 /* 폼 */
 .signup__form {
@@ -362,6 +450,40 @@ const css = `
 .signup__field input::placeholder { color: var(--gray-400); }
 .signup__field input:focus,
 .signup__select:focus { border-color: var(--primary); }
+
+/* 아이디 + 중복확인 */
+.signup__row {
+  display: flex;
+  gap: 8px;
+}
+.signup__row input { flex: 1; min-width: 0; }
+.signup__dup-btn {
+  flex-shrink: 0;
+  height: 54px;
+  padding: 0 16px;
+  border: 1px solid var(--primary);
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.signup__dup-btn:disabled {
+  border-color: var(--gray-100);
+  color: var(--gray-400);
+  cursor: default;
+}
+
+/* 안내 문구 */
+.signup__msg {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.signup__msg--error { color: var(--primary); }
 
 /* 셀렉트 */
 .signup__select {
@@ -426,7 +548,12 @@ const css = `
   background: var(--primary);
   color: #ffffff;
 }
-.signup__btn--primary:active { filter: brightness(0.94); }
+.signup__btn--primary:not(:disabled):active { filter: brightness(0.94); }
+.signup__btn--primary:disabled {
+  border-color: var(--gray-300);
+  background: var(--gray-300);
+  cursor: not-allowed;
+}
 .signup__btn--ghost {
   border: 1px solid var(--primary);
   background: #ffffff;
@@ -435,23 +562,9 @@ const css = `
 
 .signup__back:focus-visible,
 .signup__btn:focus-visible,
+.signup__dup-btn:focus-visible,
 .signup__check input:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
-
-/* 현재 단계의 동그라미까지 채워지는 선 (동그라미 중심 간격 = 28px + 56px = 84px) */
-.signup__steps::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  height: 1px;
-  width: var(--fill, 0);
-  background: var(--primary);
-  transition: width 0.3s ease;
-}
-.signup__steps--1 { --fill: calc(50% - 84px); }
-.signup__steps--2 { --fill: 50%; }
-.signup__steps--3 { --fill: calc(50% + 84px); }
 `;
