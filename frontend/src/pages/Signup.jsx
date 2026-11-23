@@ -116,7 +116,7 @@ export default function Signup() {
                   id="signup-id"
                   name="id"
                   type="text"
-                  placeholder="이름을 입력해주세요"
+                  placeholder="아이디을 입력해주세요"
                   autoComplete="username"
                   value={form.id}
                   onChange={handleChange}

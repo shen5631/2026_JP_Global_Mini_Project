@@ -16,7 +16,7 @@ export default function Login() {
           <input
             id="login-id"
             type="text"
-            placeholder="이름을 입력해주세요"
+            placeholder="아이디를 입력해주세요"
             autoComplete="username"
           />
         </div>
