@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import logo from "../assets/Logo.svg";
+import { useNavigate } from "react-router";
+import BottomNav from "../components/BottomNav";
 
 // 임시 데이터예요. 나중에 게시글 목록 API 응답으로 교체해주세요
 const SAMPLE_POSTS = [
@@ -33,33 +35,14 @@ const SAMPLE_POSTS = [
   },
 ];
 
-const TABS = [
-  {
-    id: "home",
-    label: "홈",
-    path: "M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z",
-  },
-  {
-    id: "chat",
-    label: "채팅",
-    path: "M21 12a8 8 0 0 1-11.7 7.1L4 20l1-4.6A8 8 0 1 1 21 12z",
-  },
-  {
-    id: "mypage",
-    label: "마이페이지",
-    path: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
-  },
-];
-
 export default function Home({
   posts = SAMPLE_POSTS,
   loading = false,
-  activeTab = "home",
   onPostClick,
   onQuickMatch,
-  onNavigate,
   onLoadMore, // 목록 맨 아래에 닿으면 호출돼요 (무한 스크롤)
 }) {
+  const navigate = useNavigate();
   const sentinelRef = useRef(null);
 
   useEffect(() => {
@@ -76,12 +59,23 @@ export default function Home({
     return () => observer.disconnect();
   }, [onLoadMore, loading]);
 
+  function loadDetail(e) {
+    navigate(`/detail`);
+  }
+
   return (
     <div className="home">
       <style>{css}</style>
 
       <header className="home__header">
         <img className="home__logo" src={logo} alt="itadakko" />
+        <button
+          type="button"
+          className="home__write"
+          onClick={() => navigate("/writeBoard")}
+        >
+          게시글 작성하기
+        </button>
       </header>
 
       <main className="home__main">
@@ -92,7 +86,7 @@ export default function Home({
         ) : (
           <ul className="home__list">
             {posts.map((post) => (
-              <li key={post.id}>
+              <li key={post.id} onClick={loadDetail}>
                 <button
                   type="button"
                   className="home__post"
@@ -114,47 +108,7 @@ export default function Home({
         <div ref={sentinelRef} className="home__sentinel" aria-hidden="true" />
       </main>
 
-      {/* 하단 중앙 고정: 빠른 매칭 */}
-      <button type="button" className="home__match" onClick={onQuickMatch}>
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <path d="M13 2L4 14h7l-1 8 9-12h-7z" />
-        </svg>
-        빠른 매칭
-      </button>
-
-      {/* 하단 네비게이션 */}
-      <nav className="home__nav" aria-label="메뉴">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`home__tab ${activeTab === tab.id ? "home__tab--on" : ""}`}
-            aria-current={activeTab === tab.id ? "page" : undefined}
-            onClick={() => onNavigate?.(tab.id)}
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d={tab.path} />
-            </svg>
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      <BottomNav active="home" />
     </div>
   );
 }
@@ -188,11 +142,27 @@ const css = `
   z-index: 10;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   height: calc(env(safe-area-inset-top, 0px) + 72px);
   padding: env(safe-area-inset-top, 0px) 20px 0;
   background: #ffffff;
 }
 .home__logo { display: block; height: 28px; width: auto; }
+
+/* 게시글 작성하기 (오른쪽 상단) */
+.home__write {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.home__write:active { background: #fdeadd; }
 
 /* 본문 (고정 버튼/네비에 가리지 않도록 아래 여백) */
 .home__main {
@@ -294,41 +264,9 @@ const css = `
 }
 .home__match:active { filter: brightness(0.94); }
 
-/* 하단 네비게이션 */
-.home__nav {
-  position: fixed;
-  left: 50%;
-  bottom: 0;
-  z-index: 30;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  width: 100%;
-  max-width: 430px;
-  height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  border-top: 1px solid var(--gray-100);
-  background: #ffffff;
-  transform: translateX(-50%);
-}
-.home__tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  border: 0;
-  background: none;
-  color: var(--gray-500);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-}
-.home__tab--on { color: var(--primary); font-weight: 700; }
-
 .home__post:focus-visible,
 .home__match:focus-visible,
-.home__tab:focus-visible {
+.home__write:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: -2px;
 }
