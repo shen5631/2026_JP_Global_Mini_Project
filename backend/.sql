@@ -44,21 +44,9 @@ CREATE TABLE board (
        FOREIGN KEY (category_id) REFERENCES category (category_id)
 );
 
--- 4. match
-CREATE TABLE `match` (
-     match_id   INT NOT NULL AUTO_INCREMENT,
-     user_id    INT NOT NULL,
-     match_time DATETIME,
-     PRIMARY KEY (match_id),
-     CONSTRAINT fk_match_user
-         FOREIGN KEY (user_id) REFERENCES `user` (user_ai)
-);
-
--- 5. match_log
+-- 4. match_log (매칭 기록: host = 현지인/모집글 작성자, guest = 여행자/참여자)
 CREATE TABLE match_log (
    match_log_id   INT NOT NULL AUTO_INCREMENT,
-   local_user_id  INT NOT NULL,
-   travel_user_id INT NOT NULL,
    category_id    INT NOT NULL,
    match_log_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
    board_id       INT,
@@ -66,15 +54,27 @@ CREATE TABLE match_log (
    host_user_id   INT NOT NULL,
    PRIMARY KEY (match_log_id),
    UNIQUE (board_id),
-   CONSTRAINT fk_log_local
-       FOREIGN KEY (local_user_id) REFERENCES `user` (user_ai),
-   CONSTRAINT fk_log_travel
-       FOREIGN KEY (travel_user_id) REFERENCES `user` (user_ai),
    CONSTRAINT fk_log_category
        FOREIGN KEY (category_id) REFERENCES category (category_id),
    FOREIGN KEY (board_id) REFERENCES board (board_id),
    FOREIGN KEY (guest_user_id) REFERENCES `user` (user_ai),
    FOREIGN KEY (host_user_id) REFERENCES `user` (user_ai)
+);
+
+-- 5. match (빠른 매칭 대기열) - match_log 참조
+--    match_status: WAITING(대기) / MATCHED(매칭 확정) / CANCELED(취소)
+CREATE TABLE `match` (
+     match_id     INT NOT NULL AUTO_INCREMENT,
+     user_id      INT NOT NULL,
+     category_id  INT,
+     match_status VARCHAR(10),
+     match_log_id INT,
+     match_time   DATETIME,
+     PRIMARY KEY (match_id),
+     CONSTRAINT fk_match_user
+         FOREIGN KEY (user_id) REFERENCES `user` (user_ai),
+     FOREIGN KEY (category_id) REFERENCES category (category_id),
+     FOREIGN KEY (match_log_id) REFERENCES match_log (match_log_id)
 );
 
 -- 6. chat_room
@@ -88,7 +88,19 @@ CREATE TABLE chat_room (
    FOREIGN KEY (match_log_id) REFERENCES match_log (match_log_id)
 );
 
--- 7.
+-- 7. chat_message (채팅 메시지, 한 줄 = 메시지 하나)
+CREATE TABLE chat_message (
+  chat_message_id      INT NOT NULL AUTO_INCREMENT,
+  chat_room_id         INT NOT NULL,
+  sender_user_id       INT NOT NULL,
+  chat_message_content TEXT NOT NULL,
+  chat_message_time    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (chat_message_id),
+  FOREIGN KEY (chat_room_id) REFERENCES chat_room (chat_room_id),
+  FOREIGN KEY (sender_user_id) REFERENCES `user` (user_ai)
+);
+
+-- 8.
 INSERT INTO category (category_name, category_text) VALUES
     ('면 요리', '라멘, 츠케멘, 우동, 소바'),
     ('해산물·스시', '스시, 카이센동, 회, 해산물 요리'),
