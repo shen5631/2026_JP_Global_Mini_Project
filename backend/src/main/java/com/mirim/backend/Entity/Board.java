@@ -27,10 +27,21 @@ public class Board {
     @CreationTimestamp
     private LocalDateTime board_time;
 
+    @Column(nullable = false, name = "board_head", length = 100)
+    private String boardHead;
+
     @Column(nullable = true, name = "board_text")
     private String boardText;
 
     public Board() {
+    }
+
+    public String getBoardHead() {
+        return boardHead;
+    }
+
+    public void setBoardHead(String boardHead) {
+        this.boardHead = boardHead;
     }
 
     public int getBoardId() {
