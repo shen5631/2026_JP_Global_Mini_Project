@@ -1,4 +1,10 @@
-export default function MatchingWait({ onCancel }) {
+import { useNavigate } from "react-router";
+
+export default function MatchingWait() {
+  const navigate = useNavigate();
+  function onCancel() {
+    navigate("/matching");
+  }
   return (
     <main className="wait">
       <style>{css}</style>
