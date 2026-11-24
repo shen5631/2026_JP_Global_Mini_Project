@@ -1,38 +1,107 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import CATEGORIES from "../api/CATEGORIES";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router";
+import { fetchBoardDetail, updateBoard } from "../api/board";
+import { fetchCategories } from "../api/match";
+import { clearAuth } from "../api/authApi";
+import { useI18n } from "../i18n";
 
-// 임시 데이터예요. 나중에 게시글 상세 조회 API 응답으로 교체해주세요
-const SAMPLE_BOARD = {
-  boardId: 2,
-  categoryId: 2,
-  title: "오사카 도톤보리 먹방 메이트 구합니다 (12/3~12/6)",
-  boardText:
-    "12/3부터 12/6까지 오사카에 머무는 동안 같이 먹방 다니실 분을 찾고 있어요.\n도톤보리에서 타코야키, 오코노미야키, 쿠시카츠 위주로 돌아다닐 예정이에요.\n일정과 식당은 매칭 후 채팅방에서 편하게 정해요!",
-};
-
-/**
- * P-019 모집 게시글 수정 화면
- * 라우트 예: <Route path="/editBoard" element={<BoardEditPage />} />
- */
-export default function BoardEditPage({ board = SAMPLE_BOARD }) {
+export default function BoardEditPage() {
+  const { boardId } = useParams();
   const navigate = useNavigate();
-  const [categoryId, setCategoryId] = useState(board.categoryId);
-  const [title, setTitle] = useState(board.title);
-  const [boardText, setBoardText] = useState(board.boardText);
+  const { t } = useI18n();
+  const [board, setBoard] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [categoryId, setCategoryId] = useState(null);
+  const [title, setTitle] = useState("");
+  const [boardText, setBoardText] = useState("");
+  const [status, setStatus] = useState("loading");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const changed =
+  useEffect(() => {
+    let active = true;
+    const timerId = window.setTimeout(async () => {
+      try {
+        const [boardData, categoryData] = await Promise.all([
+          fetchBoardDetail(boardId),
+          fetchCategories(),
+        ]);
+        if (!active) return;
+        setBoard(boardData);
+        setCategoryId(boardData.categoryId);
+        setTitle(boardData.title ?? "");
+        setBoardText(boardData.boardText ?? "");
+        setCategories(categoryData.filter((item) => item.name !== "상관없음"));
+        setStatus("ready");
+      } catch (e) {
+        if (!active) return;
+        if (e.status === 401) {
+          clearAuth();
+          navigate("/", { replace: true });
+          return;
+        }
+        setError(t(e.message || "게시글 정보를 불러오지 못했어요."));
+        setStatus("error");
+      }
+    }, 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timerId);
+    };
+  }, [boardId, navigate, t]);
+
+  const changed = Boolean(board) && (
     categoryId !== board.categoryId ||
     title !== board.title ||
-    boardText !== board.boardText;
+    boardText !== board.boardText
+  );
   const canSubmit =
-    changed && categoryId !== null && title.trim() && boardText.trim();
+    changed && categoryId !== null && title.trim() && boardText.trim() && !saving;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!canSubmit) return;
-    // TODO: PUT /api/boards/:boardId  { categoryId, title, boardText }
-    navigate(-1);
+    setSaving(true);
+    setError("");
+    try {
+      await updateBoard(boardId, {
+        categoryId,
+        title: title.trim(),
+        boardText: boardText.trim(),
+      });
+      navigate(`/boards/${boardId}`, { replace: true });
+    } catch (e) {
+      if (e.status === 401) {
+        clearAuth();
+        navigate("/", { replace: true });
+        return;
+      }
+      setError(t(e.message || "게시글을 수정하지 못했어요."));
+      setSaving(false);
+    }
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="edit">
+        <style>{css}</style>
+        <p className="edit__state" role="status">{t("게시글 정보를 불러오는 중...")}</p>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="edit">
+        <style>{css}</style>
+        <div className="edit__state" role="alert">
+          <p>{error}</p>
+          <button type="button" className="edit__back" onClick={() => navigate(-1)}>
+            {t("돌아가기")}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -43,7 +112,7 @@ export default function BoardEditPage({ board = SAMPLE_BOARD }) {
         <button
           type="button"
           className="edit__back"
-          aria-label="뒤로 가기"
+          aria-label={t("뒤로 가기")}
           onClick={() => navigate(-1)}
         >
           <svg
@@ -63,7 +132,7 @@ export default function BoardEditPage({ board = SAMPLE_BOARD }) {
         </button>
       </header>
 
-      <h1 className="edit__heading">모집글 수정</h1>
+      <h1 className="edit__heading">{t("모집글 수정")}</h1>
 
       <form className="edit__form" id="edit-form" onSubmit={handleSubmit}>
         <div
@@ -72,18 +141,18 @@ export default function BoardEditPage({ board = SAMPLE_BOARD }) {
           aria-labelledby="edit-label-category"
         >
           <span className="edit__label" id="edit-label-category">
-            카테고리
+            {t("카테고리")}
           </span>
           <div className="edit__chips">
-            {CATEGORIES.map((c) => (
+            {categories.map((category) => (
               <button
-                key={c.categoryId}
+                key={category.categoryId}
                 type="button"
-                className={`edit__chip ${categoryId === c.categoryId ? "edit__chip--on" : ""}`}
-                aria-pressed={categoryId === c.categoryId}
-                onClick={() => setCategoryId(c.categoryId)}
+                className={`edit__chip ${categoryId === category.categoryId ? "edit__chip--on" : ""}`}
+                aria-pressed={categoryId === category.categoryId}
+                onClick={() => setCategoryId(category.categoryId)}
               >
-                {c.categoryName}
+                {t(category.name)}
               </button>
             ))}
           </div>
@@ -91,14 +160,14 @@ export default function BoardEditPage({ board = SAMPLE_BOARD }) {
 
         <div className="edit__field">
           <label className="edit__label" htmlFor="edit-title">
-            제목
+            {t("제목")}
           </label>
           <input
             id="edit-title"
             className="edit__input"
             type="text"
-            maxLength={50}
-            placeholder="제목을 입력해주세요"
+            maxLength={100}
+            placeholder={t("제목을 입력해주세요")}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -106,16 +175,17 @@ export default function BoardEditPage({ board = SAMPLE_BOARD }) {
 
         <div className="edit__field">
           <label className="edit__label" htmlFor="edit-text">
-            상세 설명
+            {t("상세 설명")}
           </label>
           <textarea
             id="edit-text"
             className="edit__textarea"
-            placeholder="여행 일정, 가고 싶은 식당 등을 자유롭게 적어주세요"
+            placeholder={t("여행 일정, 가고 싶은 식당 등을 자유롭게 적어주세요")}
             value={boardText}
             onChange={(e) => setBoardText(e.target.value)}
           />
         </div>
+        {error && <p className="edit__error" role="alert">{error}</p>}
       </form>
 
       <div className="edit__footer">
@@ -125,7 +195,7 @@ export default function BoardEditPage({ board = SAMPLE_BOARD }) {
           className="edit__submit"
           disabled={!canSubmit}
         >
-          수정하기
+          {saving ? t("저장 중...") : t("수정하기")}
         </button>
       </div>
     </div>
@@ -182,6 +252,25 @@ const css = `
   font-size: 22px;
   font-weight: 700;
 }
+.edit__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 20px;
+  color: var(--gray-500);
+  font-size: 14px;
+  text-align: center;
+}
+.edit__state p { margin: 0; }
+.edit__state .edit__back {
+  width: auto;
+  padding: 0 16px;
+  border: 1px solid var(--gray-100);
+  border-radius: 10px;
+  font-family: inherit;
+}
+.edit__error { margin: 0; color: #d33a2c; font-size: 13px; }
 
 /* 폼 */
 .edit__form {

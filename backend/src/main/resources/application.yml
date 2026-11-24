@@ -5,3 +5,7 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+deepl:
+  api-key: ${DEEPL_API_KEY:}
+  api-url: ${DEEPL_API_URL:https://api-free.deepl.com}

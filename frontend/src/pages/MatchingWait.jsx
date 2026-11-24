@@ -1,10 +1,85 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import {
+  cancelQuickMatch,
+  fetchMatch,
+  fetchQuickMatchStatus,
+} from "../api/match";
+import { useI18n } from "../i18n";
 
 export default function MatchingWait() {
   const navigate = useNavigate();
-  function onCancel() {
-    navigate("/matching");
+  const { t } = useI18n();
+  const [error, setError] = useState("");
+  const [canceling, setCanceling] = useState(false);
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    let timeoutId;
+    async function checkStatus() {
+      try {
+        const status = await fetchQuickMatchStatus();
+        if (!active) return;
+
+        if (status.status === "MATCHED") {
+          if (status.matchLogId == null) {
+            setError(t("매칭 정보를 확인할 수 없어요. 다시 시도해주세요."));
+            return;
+          }
+          const match = await fetchMatch(status.matchLogId);
+          if (active) {
+            navigate("/matchDoing", { replace: true, state: { match } });
+          }
+          return;
+        }
+
+        if (status.status !== "WAITING") {
+          setError(t("진행 중인 매칭을 찾지 못했어요."));
+          return;
+        }
+        timeoutId = window.setTimeout(checkStatus, 2000);
+      } catch (e) {
+        if (!active) return;
+        setError(
+          t(e.status === 401
+            ? "로그인 후 매칭 상태를 확인할 수 있어요."
+            : e.status === 404
+              ? "진행 중인 매칭을 찾지 못했어요."
+              : e.message || "매칭 상태를 확인하지 못했어요."),
+        );
+      }
+    }
+
+    checkStatus();
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [navigate, retry, t]);
+
+  async function onCancel() {
+    if (canceling) return;
+    setCanceling(true);
+    setError("");
+    try {
+      await cancelQuickMatch();
+      navigate("/matching", { replace: true });
+    } catch (e) {
+      if (e.status === 409) {
+        setRetry((value) => value + 1);
+        setError(t("이미 매칭이 확정되었어요. 결과를 확인하고 있어요."));
+      } else {
+        setError(
+          t(e.status === 401
+            ? "로그인이 필요해요."
+            : e.message || "매칭을 취소하지 못했어요. 다시 시도해주세요."),
+        );
+      }
+      setCanceling(false);
+    }
   }
+
   return (
     <main className="wait">
       <style>{css}</style>
@@ -15,7 +90,7 @@ export default function MatchingWait() {
           className="wait__logo"
           viewBox="0 0 140 240"
           role="img"
-          aria-label="itadakko 로고"
+          aria-label={t("itadakko 로고")}
         >
           <g fill="currentColor">
             <rect
@@ -46,14 +121,34 @@ export default function MatchingWait() {
         </svg>
 
         <p className="wait__text" role="status">
-          맛있는 여행을 같이할
+          {t("맛있는 여행을 같이할")}
           <br />
-          친구를 찾고있어요!
+          {t("친구를 찾고있어요!")}
         </p>
+        {error && (
+          <div className="wait__error" role="alert">
+            <p>{error}</p>
+            <button
+              type="button"
+              className="wait__retry"
+              onClick={() => {
+                setError("");
+                setRetry((value) => value + 1);
+              }}
+            >
+              {t("상태 다시 확인")}
+            </button>
+          </div>
+        )}
       </section>
 
-      <button type="button" className="wait__cancel" onClick={onCancel}>
-        매칭 취소
+      <button
+        type="button"
+        className="wait__cancel"
+        onClick={onCancel}
+        disabled={canceling}
+      >
+        {canceling ? t("취소 중...") : t("매칭 취소")}
       </button>
     </main>
   );
@@ -118,6 +213,22 @@ const css = `
   line-height: 1.5;
   text-align: center;
 }
+.wait__error {
+  color: #d33a2c;
+  font-size: 14px;
+  text-align: center;
+}
+.wait__retry {
+  margin-top: 12px;
+  padding: 8px 14px;
+  border: 1px solid var(--gray-100);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--gray-600);
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
 
 /* 취소 버튼 */
 .wait__cancel {
@@ -132,8 +243,10 @@ const css = `
   font-weight: 500;
   cursor: pointer;
 }
+.wait__cancel:disabled { opacity: 0.6; cursor: default; }
 .wait__cancel:active { background: #f7f7f7; }
-.wait__cancel:focus-visible {
+.wait__cancel:focus-visible,
+.wait__retry:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }

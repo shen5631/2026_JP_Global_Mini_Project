@@ -1,6 +1,7 @@
 package com.mirim.backend.controller;
 
 import com.mirim.backend.DTO.send_message_DTO;
+import com.mirim.backend.DTO.appointment_DTO;
 import com.mirim.backend.Entity.User;
 import com.mirim.backend.service.Chat_Service;
 import com.mirim.backend.service.User_Service;
@@ -35,5 +36,28 @@ public class Chat_controller {
                                           @RequestBody send_message_DTO body){
         User user = userService.get_user(token);
         return ResponseEntity.status(HttpStatus.CREATED).body(chatService.send_message(chatRoomId, body.content(), user));
+    }
+
+    @GetMapping("/{chatRoomId}/appointment")
+    public ResponseEntity<?> get_appointment(@RequestHeader(value = "Authorization", required = false) String token,
+                                             @PathVariable int chatRoomId){
+        User user = userService.get_user(token);
+        return ResponseEntity.status(HttpStatus.OK).body(chatService.get_appointment(chatRoomId, user));
+    }
+
+    @PutMapping("/{chatRoomId}/appointment")
+    public ResponseEntity<?> save_appointment(@RequestHeader(value = "Authorization", required = false) String token,
+                                              @PathVariable int chatRoomId,
+                                              @RequestBody appointment_DTO body){
+        User user = userService.get_user(token);
+        return ResponseEntity.status(HttpStatus.OK).body(chatService.save_appointment(chatRoomId, body, user));
+    }
+
+    @DeleteMapping("/{chatRoomId}/appointment")
+    public ResponseEntity<?> cancel_appointment(@RequestHeader(value = "Authorization", required = false) String token,
+                                                @PathVariable int chatRoomId){
+        User user = userService.get_user(token);
+        chatService.cancel_appointment(chatRoomId, user);
+        return ResponseEntity.status(HttpStatus.OK).body(java.util.Map.of("message", "약속이 취소되고 채팅방이 종료되었습니다"));
     }
 }

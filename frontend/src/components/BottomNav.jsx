@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { useI18n } from "../i18n";
 
 const css = `
 .nav {
@@ -109,9 +110,10 @@ const TABS = [
  */
 export default function BottomNav({ active }) {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   return (
-    <nav className="nav" aria-label="하단 메뉴">
+    <nav className="nav" aria-label={t("하단 메뉴")}>
       <style>{css}</style>
       {TABS.map((tab) => (
         <button
@@ -122,7 +124,7 @@ export default function BottomNav({ active }) {
           onClick={() => navigate(tab.path)}
         >
           {tab.icon}
-          {tab.label}
+          {t(tab.label)}
         </button>
       ))}
     </nav>

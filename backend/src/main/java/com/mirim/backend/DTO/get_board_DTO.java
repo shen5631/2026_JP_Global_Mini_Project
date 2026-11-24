@@ -10,6 +10,7 @@ public record get_board_DTO(
         boolean userLocal,
         int categoryId,
         String categoryName,
+        String title,
         String boardText,
         LocalDateTime boardTime
 ){}

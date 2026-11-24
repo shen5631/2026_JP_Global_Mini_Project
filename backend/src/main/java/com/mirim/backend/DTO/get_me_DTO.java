@@ -6,6 +6,7 @@ public record get_me_DTO(
         String userName,
         String userNickname,
         int userAge,
+        String userGender,
         String userCountry,
         boolean userLocal,
         category_DTO category

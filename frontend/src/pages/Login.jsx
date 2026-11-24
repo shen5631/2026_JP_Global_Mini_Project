@@ -1,7 +1,38 @@
+import { useState } from "react";
 import logo from "../assets/Logo.svg"; // Logo.svg 위치에 맞게 경로 수정해주세요
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { login } from "../api/authApi";
+import { useI18n } from "../i18n";
 
 export default function Login() {
+  const navigate = useNavigate();
+  const { t } = useI18n();
+  const [userId, setUserId] = useState("");
+  const [userPw, setUserPw] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const canSubmit = userId.trim() !== "" && userPw !== "" && !loading;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setLoading(true);
+    setError("");
+    try {
+      await login(userId.trim(), userPw);
+      navigate("/home");
+    } catch (err) {
+      setError(
+        err.status === 401
+          ? "아이디 또는 비밀번호가 일치하지 않아요."
+          : "로그인 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <main className="login">
       <style>{css}</style>
@@ -10,35 +41,42 @@ export default function Login() {
         <img src={logo} alt="itadakko" />
       </h1>
 
-      <form className="login__form" onSubmit={(e) => e.preventDefault()}>
+      <form className="login__form" onSubmit={handleSubmit}>
         <div className="login__field">
-          <label htmlFor="login-id">아이디</label>
+          <label htmlFor="login-id">{t("아이디")}</label>
           <input
             id="login-id"
             type="text"
-            placeholder="아이디를 입력해주세요"
+            placeholder={t("아이디를 입력해주세요")}
             autoComplete="username"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
           />
         </div>
 
         <div className="login__field">
-          <label htmlFor="login-pw">비밀번호</label>
+          <label htmlFor="login-pw">{t("비밀번호")}</label>
           <input
             id="login-pw"
             type="password"
-            placeholder="비밀번호 (영문, 숫자 8~20자)"
+            placeholder={t("비밀번호 (영문, 숫자 8~20자)")}
             autoComplete="current-password"
+            value={userPw}
+            onChange={(e) => setUserPw(e.target.value)}
           />
+          {error && (
+            <p className="login__error" role="alert">
+              {t(error)}
+            </p>
+          )}
         </div>
 
         <div className="login__actions">
-          <button type="button" className="login__next">
-            로그인
+          <button type="submit" className="login__next" disabled={!canSubmit}>
+            {loading ? t("로그인 중...") : t("로그인")}
           </button>
-          <Link to="/signup">
-            <button type="button" className="login__signup">
-              회원가입
-            </button>
+          <Link to="/signup" className="login__signup">
+            {t("회원가입")}
           </Link>
         </div>
       </form>
@@ -116,6 +154,12 @@ const css = `
 }
 .login__field input::placeholder { color: var(--placeholder); }
 .login__field input:focus { border-color: var(--primary); }
+.login__error {
+  margin: 0;
+  color: var(--primary);
+  font-size: 12px;
+  line-height: 1.3;
+}
 
 /* 버튼 */
 .login__actions {
@@ -138,16 +182,17 @@ const css = `
   font-weight: 500;
   cursor: pointer;
 }
-.login__next:active { filter: brightness(0.94); }
+.login__next:active:not(:disabled) { filter: brightness(0.94); }
+.login__next:disabled {
+  background: #d9d9d9;
+  cursor: not-allowed;
+}
 .login__signup {
   padding: 4px 8px;
-  border: 0;
-  background: none;
   color: var(--primary);
-  font-family: inherit;
   font-size: 14px;
   font-weight: 700;
-  cursor: pointer;
+  text-decoration: none;
 }
 .login__next:focus-visible,
 .login__signup:focus-visible {

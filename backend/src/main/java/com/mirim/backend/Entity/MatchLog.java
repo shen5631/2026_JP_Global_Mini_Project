@@ -9,14 +9,15 @@ import java.time.LocalDateTime;
 @Table(name = "match_log")
 public class MatchLog {
 
+    public enum Status { ACTIVE, CANCELED, COMPLETED }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "match_log_id", nullable = false)
     private int matchLogId;
 
     // 모집글로 매칭된 경우에만 값이 있음 (빠른 매칭은 null)
-    // unique: 게시글 하나당 매칭은 한 번만 가능 (1:1 정원)
-    @JoinColumn(name = "board_id", unique = true)
+    @JoinColumn(name = "board_id")
     @ManyToOne
     private Board board;
 
@@ -37,6 +38,17 @@ public class MatchLog {
     @CreationTimestamp
     @Column(nullable = false, name = "match_log_time")
     private LocalDateTime matchLogTime;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "match_status", length = 20)
+    private Status status = Status.ACTIVE;
+
+    @ManyToOne
+    @JoinColumn(name = "canceled_by_user_id")
+    private User canceledBy;
+
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
 
     public MatchLog() {
     }
@@ -87,5 +99,29 @@ public class MatchLog {
 
     public void setMatchLogTime(LocalDateTime matchLogTime) {
         this.matchLogTime = matchLogTime;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    public User getCanceledBy() {
+        return canceledBy;
+    }
+
+    public void setCanceledBy(User canceledBy) {
+        this.canceledBy = canceledBy;
+    }
+
+    public LocalDateTime getCanceledAt() {
+        return canceledAt;
+    }
+
+    public void setCanceledAt(LocalDateTime canceledAt) {
+        this.canceledAt = canceledAt;
     }
 }

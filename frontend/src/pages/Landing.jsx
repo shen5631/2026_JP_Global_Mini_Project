@@ -1,17 +1,6 @@
-import { useState } from "react";
 import logo from "../assets/Logo.svg";
-
-const TEXT = {
-  ko: {
-    title: ["맛있는 여행에", "오신 것을 환영해요!"],
-    start: "맛있는 여행 함께하기",
-  },
-  // 일본어 문구는 임시 번역이에요. 확인 후 수정해주세요
-  ja: {
-    title: ["おいしい旅へ", "ようこそ！"],
-    start: "おいしい旅を一緒に楽しむ",
-  },
-};
+import { useNavigate } from "react-router";
+import { useI18n } from "../i18n";
 
 const LANGS = [
   { code: "ko", label: "한국어" },
@@ -52,9 +41,9 @@ function ForkIcon() {
   );
 }
 
-export default function Landing({ onStart }) {
-  const [lang, setLang] = useState("ko");
-  const t = TEXT[lang];
+export default function Landing() {
+  const { lang, setLanguage, t } = useI18n();
+  const navigate = useNavigate();
 
   return (
     <div className="landing">
@@ -65,14 +54,14 @@ export default function Landing({ onStart }) {
         <div className="landing__inner landing__bar">
           <img className="landing__brand" src={logo} alt="itadakko" />
 
-          <div className="landing__langs" role="group" aria-label="언어 선택">
+          <div className="landing__langs" role="group" aria-label={t("언어 선택")}>
             {LANGS.map(({ code, label }) => (
               <button
                 key={code}
                 type="button"
                 className={`landing__lang ${lang === code ? "landing__lang--on" : ""}`}
                 aria-pressed={lang === code}
-                onClick={() => setLang(code)}
+                onClick={() => setLanguage(code)}
               >
                 {label}
               </button>
@@ -86,12 +75,16 @@ export default function Landing({ onStart }) {
         <div className="landing__inner landing__grid">
           <div className="landing__copy">
             <h1 className="landing__title">
-              {t.title[0]}
+              {t("맛있는 여행에")}
               <br />
-              {t.title[1]}
+              {t("오신 것을 환영해요!")}
             </h1>
-            <button type="button" className="landing__start" onClick={onStart}>
-              {t.start}
+            <button
+              type="button"
+              className="landing__start"
+              onClick={() => navigate("/login")}
+            >
+              {t("맛있는 여행 함께하기")}
             </button>
           </div>
 

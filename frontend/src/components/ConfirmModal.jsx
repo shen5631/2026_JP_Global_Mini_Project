@@ -1,4 +1,5 @@
 import { useEffect, useId } from "react";
+import { useI18n } from "../i18n";
 
 const css = `
 .modal {
@@ -86,6 +87,7 @@ export default function ConfirmModal({
   onCancel,
 }) {
   const titleId = useId();
+  const { t } = useI18n();
 
   // ESC 로 닫기
   useEffect(() => {
@@ -107,9 +109,9 @@ export default function ConfirmModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id={titleId} className="modal__title">
-          {title}
+          {t(title)}
         </h2>
-        <p className="modal__message">{message}</p>
+        <p className="modal__message">{t(message)}</p>
         <div className="modal__actions">
           <button
             type="button"
@@ -117,7 +119,7 @@ export default function ConfirmModal({
             onClick={onCancel}
             disabled={loading}
           >
-            {cancelLabel}
+            {t(cancelLabel)}
           </button>
           <button
             type="button"
@@ -125,7 +127,7 @@ export default function ConfirmModal({
             onClick={onConfirm}
             disabled={loading}
           >
-            {loading ? "처리 중…" : confirmLabel}
+            {loading ? t("처리 중...") : t(confirmLabel)}
           </button>
         </div>
       </div>

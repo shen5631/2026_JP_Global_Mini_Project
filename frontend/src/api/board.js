@@ -16,6 +16,8 @@
 // ⚠ board 테이블에 제목 컬럼이 없습니다. 목록 화면에는 제목이 있으므로
 //    board_title 컬럼 추가를 권장합니다. (응답 필드: title)
 
+import { getAccessToken } from "./authApi";
+
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 const MOCK_BOARD = {
@@ -37,17 +39,60 @@ const MOCK_BOARD = {
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function request(url, options) {
+  const token = getAccessToken();
   const res = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
     credentials: "include",
     ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options?.headers,
+    },
   });
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
   if (!res.ok) {
-    const error = new Error(`HTTP ${res.status}`);
+    const error = new Error(data?.message || `HTTP ${res.status}`);
     error.status = res.status;
     throw error;
   }
-  return res.json();
+  return data;
+}
+
+/** 공개 중인 모집글 GET /api/boards */
+export function fetchBoards(page = 0, size = 20) {
+  return request(`/api/boards?page=${page}&size=${size}`);
+}
+
+/** 로그인한 사용자의 모집글 목록 GET /api/boards/me */
+export function fetchMyBoards() {
+  return request("/api/boards/me");
+}
+
+/** 모집글 작성 POST /api/boards */
+export function createBoard(body) {
+  return request("/api/boards", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** 모집글 수정 PUT /api/boards/:boardId */
+export function updateBoard(boardId, body) {
+  return request(`/api/boards/${boardId}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+/** 모집글 삭제 DELETE /api/boards/:boardId */
+export function deleteBoard(boardId) {
+  return request(`/api/boards/${boardId}`, { method: "DELETE" });
 }
 
 /** 게시글 상세 조회  GET /api/boards/:boardId */
@@ -60,7 +105,7 @@ export async function fetchBoardDetail(boardId) {
 }
 
 /**
- * 참여요청  POST /api/boards/:boardId/participation
+ * 참여요청  POST /api/boards/:boardId/join
  * 성공 시 즉시 매칭 + 채팅방 생성 → { chatRoomId } 반환을 가정
  * 이미 다른 식사에 참여 중이면 409
  */
@@ -69,5 +114,5 @@ export async function requestParticipation(boardId) {
     await delay(400);
     return { chatRoomId: 100 };
   }
-  return request(`/api/boards/${boardId}/participation`, { method: "POST" });
+  return request(`/api/boards/${boardId}/join`, { method: "POST" });
 }
