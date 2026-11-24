@@ -45,7 +45,7 @@ public class Board_Service {
         }
         Page<Board> result = boardRepository.findOpenBoards(categoryId, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "boardId")));
         List<get_board_list_DTO> boards = result.getContent().stream()
-                .map(b -> new get_board_list_DTO(b.getBoardId(), b.getUserId().getUserNickname(),
+                .map(b -> new get_board_list_DTO(b.getBoardId(), b.getBoardHead(), b.getUserId().getUserNickname(),
                         b.getCategoryId().getCategoryName(), b.getBoardText(), b.getBoard_time()))
                 .toList();
         return Map.of("boards", boards, "totalPages", result.getTotalPages(), "currentPage", result.getNumber());
@@ -55,8 +55,9 @@ public class Board_Service {
         Board board = find_board(boardId);
         User writer = board.getUserId();
         Category category = board.getCategoryId();
-        return new get_board_DTO(board.getBoardId(), writer.getUserAi(), writer.getUserNickname(), writer.getUserCountry(),
-                writer.getUserLocal(), category.getCategoryId(), category.getCategoryName(), board.getBoardText(), board.getBoard_time());
+        return new get_board_DTO(board.getBoardId(), writer.getUserAi(), writer.getUserNickname(), writer.getUserGender(),
+                writer.getUserAge(), writer.getUserCountry(), writer.getUserLocal(), category.getCategoryId(), category.getCategoryName(),
+                board.getBoardHead(), board.getBoardText(), board.getBoard_time());
     }
 
     public Board post_board(post_board_DTO board, User user){
@@ -64,6 +65,7 @@ public class Board_Service {
         Board board1 = new Board();
         board1.setUserId(user);
         board1.setCategoryId(find_category(board.categoryId()));
+        board1.setBoardHead(board.title().trim());
         board1.setBoardText(board.boardText());
 
         return boardRepository.save(board1);
@@ -74,6 +76,7 @@ public class Board_Service {
         Board board1 = find_board(boardId);
         check_writer(board1, user);
         board1.setCategoryId(find_category(board.categoryId()));
+        board1.setBoardHead(board.title().trim());
         board1.setBoardText(board.boardText());
         boardRepository.save(board1);
     }
@@ -124,7 +127,8 @@ public class Board_Service {
     }
 
     private void check_board_input(post_board_DTO board){
-        if(board.categoryId() == null || board.boardText() == null || board.boardText().isBlank()){
+        if(board.categoryId() == null || board.title() == null || board.title().isBlank() || board.title().trim().length() > 100
+                || board.boardText() == null || board.boardText().isBlank()){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "필수값 누락");
         }
     }
