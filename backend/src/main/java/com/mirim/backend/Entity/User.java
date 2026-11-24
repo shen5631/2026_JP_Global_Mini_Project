@@ -39,20 +39,6 @@ public class User {
 
     }
 
-    public User(Integer userAi, String userId, String userPw, String userName, String userNickname, int userAge, boolean userLocal, String userCountry, String userGender, Integer categoryId, LocalDateTime userCreate) {
-        this.userAi = userAi;
-        this.userId = userId;
-        this.userPw = userPw;
-        this.userName = userName;
-        this.userNickname = userNickname;
-        this.userAge = userAge;
-        this.userLocal = userLocal;
-        this.userCountry = userCountry;
-        this.userGender = userGender;
-        this.categoryId = categoryId;
-        this.userCreate = userCreate;
-    }
-
 
     public Integer getUserAi() {
         return userAi;
@@ -102,7 +88,7 @@ public class User {
         this.userAge = userAge;
     }
 
-    public boolean isUserLocal() {
+    public boolean getUserLocal() {
         return userLocal;
     }
 
