@@ -9,6 +9,8 @@ import java.time.LocalDateTime;
 @Table(name = "board")
 public class Board {
 
+    public enum Status { OPEN, QUICK_WAITING, MATCHED, CANCEL_PENDING, CLOSED }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "board_id", nullable = false)
@@ -32,6 +34,21 @@ public class Board {
 
     @Column(nullable = true, name = "board_text")
     private String boardText;
+
+    @Column(nullable = false, name = "board_head", length = 100)
+    private String boardHead;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "board_status", length = 20)
+    private Status status = Status.OPEN;
+
+    @ManyToOne
+    @JoinColumn(name = "locked_by_match_log_id")
+    private MatchLog lockedByMatchLog;
+
+    @ManyToOne
+    @JoinColumn(name = "locked_by_quick_match_id")
+    private QuickMatch lockedByQuickMatch;
 
     public Board() {
     }
@@ -82,5 +99,37 @@ public class Board {
 
     public void setBoardText(String boardText) {
         this.boardText = boardText;
+    }
+
+    public String getBoardHead() {
+        return boardHead;
+    }
+
+    public void setBoardHead(String boardHead) {
+        this.boardHead = boardHead;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    public MatchLog getLockedByMatchLog() {
+        return lockedByMatchLog;
+    }
+
+    public void setLockedByMatchLog(MatchLog lockedByMatchLog) {
+        this.lockedByMatchLog = lockedByMatchLog;
+    }
+
+    public QuickMatch getLockedByQuickMatch() {
+        return lockedByQuickMatch;
+    }
+
+    public void setLockedByQuickMatch(QuickMatch lockedByQuickMatch) {
+        this.lockedByQuickMatch = lockedByQuickMatch;
     }
 }

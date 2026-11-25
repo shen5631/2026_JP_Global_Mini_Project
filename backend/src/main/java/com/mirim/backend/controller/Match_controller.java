@@ -1,6 +1,7 @@
 package com.mirim.backend.controller;
 
 import com.mirim.backend.DTO.quick_match_DTO;
+import com.mirim.backend.DTO.board_decision_DTO;
 import com.mirim.backend.Entity.User;
 import com.mirim.backend.service.Match_Service;
 import com.mirim.backend.service.User_Service;
@@ -60,5 +61,24 @@ public class Match_controller {
                                        @PathVariable int matchLogId){
         User user = userService.get_user(token);
         return ResponseEntity.status(HttpStatus.OK).body(matchService.get_match(matchLogId, user));
+    }
+
+    @DeleteMapping("/matches/{matchLogId}")
+    public ResponseEntity<?> cancel_match(@RequestHeader(value = "Authorization", required = false) String token,
+                                          @PathVariable int matchLogId){
+        User user = userService.get_user(token);
+        matchService.cancel_match(matchLogId, user);
+        return ResponseEntity.status(HttpStatus.OK).body(Map.of("message", "매칭이 취소되었습니다"));
+    }
+
+    @PutMapping("/matches/{matchLogId}/boards/{boardId}/decision")
+    public ResponseEntity<?> decide_canceled_board(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @PathVariable int matchLogId,
+            @PathVariable int boardId,
+            @RequestBody board_decision_DTO decision){
+        User user = userService.get_user(token);
+        matchService.decide_canceled_board(matchLogId, boardId, decision, user);
+        return ResponseEntity.status(HttpStatus.OK).body(Map.of("message", "게시글 처리가 완료되었습니다"));
     }
 }

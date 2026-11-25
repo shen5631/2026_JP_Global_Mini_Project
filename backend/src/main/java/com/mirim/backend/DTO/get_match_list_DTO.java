@@ -6,5 +6,6 @@ public record get_match_list_DTO(
         int matchLogId,
         String categoryName,
         String partnerNickname,
-        LocalDateTime matchLogTime
+        LocalDateTime matchLogTime,
+        String status
 ){}

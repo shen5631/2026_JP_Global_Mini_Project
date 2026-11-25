@@ -37,6 +37,9 @@ CREATE TABLE board (
    board_time  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
    board_text  TEXT,
    board_head  VARCHAR(100) NOT NULL,
+   board_status VARCHAR(20) NOT NULL DEFAULT 'OPEN',
+   locked_by_match_log_id INT,
+   locked_by_quick_match_id INT,
    PRIMARY KEY (board_id),
    CONSTRAINT fk_board_user
        FOREIGN KEY (user_id) REFERENCES `user` (user_ai),
@@ -52,13 +55,33 @@ CREATE TABLE match_log (
    board_id       INT,
    guest_user_id  INT NOT NULL,
    host_user_id   INT NOT NULL,
+   match_status   VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+   canceled_by_user_id INT,
+   canceled_at    DATETIME,
    PRIMARY KEY (match_log_id),
-   UNIQUE (board_id),
    CONSTRAINT fk_log_category
        FOREIGN KEY (category_id) REFERENCES category (category_id),
    FOREIGN KEY (board_id) REFERENCES board (board_id),
    FOREIGN KEY (guest_user_id) REFERENCES `user` (user_ai),
-   FOREIGN KEY (host_user_id) REFERENCES `user` (user_ai)
+   FOREIGN KEY (host_user_id) REFERENCES `user` (user_ai),
+   FOREIGN KEY (canceled_by_user_id) REFERENCES `user` (user_ai)
+);
+
+ALTER TABLE board
+    ADD CONSTRAINT fk_board_locked_match
+        FOREIGN KEY (locked_by_match_log_id) REFERENCES match_log (match_log_id);
+
+-- 매칭 취소 알림: recipient_user_id 기준으로 다음 접속 시 미확인 알림 조회
+CREATE TABLE match_notification (
+    notification_id INT NOT NULL AUTO_INCREMENT,
+    recipient_user_id INT NOT NULL,
+    match_log_id INT NOT NULL,
+    notification_message VARCHAR(200) NOT NULL,
+    notification_read TINYINT(1) NOT NULL DEFAULT 0,
+    notification_created DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (notification_id),
+    FOREIGN KEY (recipient_user_id) REFERENCES `user` (user_ai),
+    FOREIGN KEY (match_log_id) REFERENCES match_log (match_log_id)
 );
 
 -- 5. match (빠른 매칭 대기열) - match_log 참조
@@ -76,6 +99,10 @@ CREATE TABLE `match` (
      FOREIGN KEY (category_id) REFERENCES category (category_id),
      FOREIGN KEY (match_log_id) REFERENCES match_log (match_log_id)
 );
+
+ALTER TABLE board
+    ADD CONSTRAINT fk_board_locked_quick_match
+        FOREIGN KEY (locked_by_quick_match_id) REFERENCES `match` (match_id);
 
 -- 6. chat_room
 CREATE TABLE chat_room (
@@ -100,7 +127,18 @@ CREATE TABLE chat_message (
   FOREIGN KEY (sender_user_id) REFERENCES `user` (user_ai)
 );
 
--- 8.
+-- 8. chat_appointment (채팅방별 공유 약속)
+CREATE TABLE chat_appointment (
+  appointment_id   INT NOT NULL AUTO_INCREMENT,
+  chat_room_id     INT NOT NULL,
+  appointment_place VARCHAR(50) NOT NULL,
+  appointment_at   DATETIME NOT NULL,
+  PRIMARY KEY (appointment_id),
+  UNIQUE KEY uq_appointment_chat_room (chat_room_id),
+  FOREIGN KEY (chat_room_id) REFERENCES chat_room (chat_room_id)
+);
+
+-- 9.
 INSERT INTO category (category_name, category_text) VALUES
     ('면 요리', '라멘, 츠케멘, 우동, 소바'),
     ('해산물·스시', '스시, 카이센동, 회, 해산물 요리'),

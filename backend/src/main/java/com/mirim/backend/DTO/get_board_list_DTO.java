@@ -7,6 +7,7 @@ public record get_board_list_DTO(
         String title,
         String nickname,
         String categoryName,
+        String title,
         String boardText,
         LocalDateTime boardTime
 ){}

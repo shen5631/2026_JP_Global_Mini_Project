@@ -132,7 +132,7 @@ public class User_Service {
                     .orElse(null);
         }
         return new get_me_DTO(user.getUserAi(), user.getUserId(), user.getUserName(), user.getUserNickname(),
-                user.getUserAge(), user.getUserCountry(), user.getUserLocal(), category);
+                user.getUserAge(), user.getUserGender(), user.getUserCountry(), user.getUserLocal(), category);
     }
 
     public void patch_me(User user, patch_me_DTO dto){

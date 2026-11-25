@@ -1,49 +1,62 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import logo from "../assets/Logo.svg";
 import { useNavigate } from "react-router";
 import BottomNav from "../components/BottomNav";
-
-// 임시 데이터예요. 나중에 게시글 목록 API 응답으로 교체해주세요
-const SAMPLE_POSTS = [
-  {
-    id: 2,
-    title: "오사카 도톤보리 먹방 메이트 구합니다 (12/3~12/6)",
-    author: "배고픈 여우",
-    createdAt: "2026.11.22.",
-    commentCount: 5,
-  },
-  {
-    id: 5,
-    title: "교토 말차 디저트 카페 같이 돌아다녀요",
-    author: "달콤한 수달",
-    createdAt: "2026.11.20.",
-    commentCount: 8,
-  },
-  {
-    id: 7,
-    title: "후쿠오카 모츠나베 같이 드실 분 구해요",
-    author: "야식왕 토끼",
-    createdAt: "2026.11.19.",
-    commentCount: 2,
-  },
-  {
-    id: 9,
-    title: "도쿄 츠키지 시장 아침 먹방 동행 구해요",
-    author: "아침형 고양이",
-    createdAt: "2026.11.18.",
-    commentCount: 4,
-  },
-];
+import { fetchBoards } from "../api/board";
+import { useI18n } from "../i18n";
+import { useTranslatedTexts } from "../hooks/useTranslatedTexts";
+import TranslationNotice from "../components/TranslationNotice";
 
 export default function Home({
-  posts = SAMPLE_POSTS,
-  loading = false,
+  posts: providedPosts,
+  loading: providedLoading = false,
   onPostClick,
-  onQuickMatch,
   onLoadMore, // 목록 맨 아래에 닿으면 호출돼요 (무한 스크롤)
 }) {
   const navigate = useNavigate();
+  const { lang, t } = useI18n();
   const sentinelRef = useRef(null);
+  const [apiPosts, setApiPosts] = useState([]);
+  const [apiLoading, setApiLoading] = useState(providedPosts === undefined);
+  const [loadError, setLoadError] = useState("");
+  const posts = providedPosts ?? apiPosts;
+  const loading = providedPosts === undefined ? apiLoading : providedLoading;
+  const translatedTitles = useTranslatedTexts(
+    posts.map((post) => post.title ?? ""),
+    lang,
+  );
+
+  useEffect(() => {
+    if (providedPosts !== undefined) return;
+    let active = true;
+    fetchBoards()
+      .then((result) => {
+        if (!active) return;
+        const boards = Array.isArray(result?.boards) ? result.boards : [];
+        setApiPosts(boards.map((board) => {
+          const date = new Date(board.boardTime);
+          const createdAt = Number.isNaN(date.getTime())
+            ? ""
+            : date.toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR");
+          return {
+            id: board.boardId,
+            title: board.title || board.boardText?.split("\n")[0] || t("제목 없는 모집글"),
+            author: board.userNickname,
+            createdAt,
+          };
+        }));
+        setLoadError("");
+      })
+      .catch((e) => {
+        if (active) setLoadError(t(e.message || "게시글을 불러오지 못했어요."));
+      })
+      .finally(() => {
+        if (active) setApiLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [lang, providedPosts, t]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -59,10 +72,6 @@ export default function Home({
     return () => observer.disconnect();
   }, [onLoadMore, loading]);
 
-  function loadDetail(e) {
-    navigate(`/detail`);
-  }
-
   return (
     <div className="home">
       <style>{css}</style>
@@ -74,26 +83,38 @@ export default function Home({
           className="home__write"
           onClick={() => navigate("/writeBoard")}
         >
-          게시글 작성하기
+          {t("게시글 작성하기")}
         </button>
       </header>
 
       <main className="home__main">
-        <h1 className="home__title">전체 게시글</h1>
+        <h1 className="home__title">{t("전체 게시글")}</h1>
+        <TranslationNotice
+          failed={translatedTitles.failed}
+          hasContent={posts.length > 0}
+        />
+
+        {loadError && <p className="home__loading" role="alert">{loadError}</p>}
 
         {posts.length === 0 ? (
-          <p className="home__empty">아직 게시글이 없어요.</p>
+          <p className="home__empty">
+            {loading ? t("게시글을 불러오는 중...") : t("아직 게시글이 없어요.")}
+          </p>
         ) : (
           <ul className="home__list">
-            {posts.map((post) => (
-              <li key={post.id} onClick={loadDetail}>
+            {posts.map((post, index) => (
+              <li key={post.id}>
                 <button
                   type="button"
                   className="home__post"
-                  onClick={() => onPostClick?.(post)}
+                  onClick={() =>
+                    onPostClick ? onPostClick(post) : navigate(`/boards/${post.id}`)
+                  }
                 >
                   <span className="home__post-body">
-                    <span className="home__post-title">{post.title}</span>
+                    <span className="home__post-title">
+                      {translatedTitles.texts[index]}
+                    </span>
                     <span className="home__post-meta">
                       {post.author} · {post.createdAt}
                     </span>
@@ -104,7 +125,7 @@ export default function Home({
           </ul>
         )}
 
-        {loading && <p className="home__loading">불러오는 중...</p>}
+        {loading && <p className="home__loading">{t("불러오는 중...")}</p>}
         <div ref={sentinelRef} className="home__sentinel" aria-hidden="true" />
       </main>
 

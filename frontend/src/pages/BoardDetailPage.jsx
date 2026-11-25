@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { fetchBoardDetail, requestParticipation } from "../api/board";
+import { clearAuth, getAuth } from "../api/authApi";
+import { useI18n } from "../i18n";
 import ConfirmModal from "../components/ConfirmModal";
 import MatchConfirmedModal from "../components/MatchConfirmedModal";
+import { useTranslatedTexts } from "../hooks/useTranslatedTexts";
+import TranslationNotice from "../components/TranslationNotice";
 
 const css = `
 .detail {
@@ -212,27 +216,21 @@ const css = `
 const pad = (n) => String(n).padStart(2, "0");
 
 // board_time(DATETIME) → "2026.11.22. 14:30"
-function formatBoardTime(value) {
+function formatBoardTime(value, lang) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "";
+  if (lang === "ja") {
+    return d.toLocaleString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  }
   return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}. ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
-const MOCK_BOARD = {
-  boardId: 2,
-  userId: 10,
-  categoryId: 3,
-  categoryName: "일식",
-  title: "오사카 도톤보리 먹방 메이트 구합니다 (12/3~12/6)",
-  nickname: "배고픈 여우",
-  gender: "여성",
-  age: 27,
-  boardTime: "2026-11-22T14:30:00+09:00",
-  boardText:
-    "12/3부터 12/6까지 오사카에 머무는 동안 같이 먹방 다니실 분을 찾고 있어요.\n" +
-    "도톤보리에서 타코야키, 오코노미야키, 쿠시카츠 위주로 돌아다닐 예정이에요.\n" +
-    "일정과 식당은 매칭 후 채팅방에서 편하게 정해요!",
-};
 
 /**
  * P-006 모집 게시글 상세 화면
@@ -241,32 +239,37 @@ const MOCK_BOARD = {
 export default function BoardDetailPage() {
   const { boardId } = useParams();
   const navigate = useNavigate();
-
-  // TODO: 로그인한 사용자 id === board.userId 일 때만 true 로 바꾸기
-  const isAuthor = true;
+  const { lang, t } = useI18n();
 
   const [chatRoomId, setChatRoomId] = useState(null);
-  const [status, setStatus] = useState("ready"); // loading | ready | error
+  const [status, setStatus] = useState("loading"); // loading | ready | error
   const [board, setBoard] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [joined, setJoined] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const isAuthor = Number(getAuth()?.userAi) === Number(board?.userAi);
+  const translatedBoard = useTranslatedTexts(
+    [board?.title ?? "", board?.boardText ?? ""],
+    lang,
+  );
 
   const loadBoard = useCallback(async () => {
-    setStatus("loading");
     try {
       const data = await fetchBoardDetail(boardId);
       setBoard(data);
+      setErrorMessage("");
       setStatus("ready");
-    } catch {
-      setStatus("error"); // TODO: P-015 오류 안내 화면으로 연결
+    } catch (e) {
+      setErrorMessage(t(e.message || "게시글을 불러오지 못했어요."));
+      setStatus("error");
     }
-  }, [boardId]);
+  }, [boardId, t]);
 
-  // useEffect(() => {
-  //   loadBoard();
-  // }, [loadBoard]);
+  useEffect(() => {
+    const timerId = window.setTimeout(loadBoard, 0);
+    return () => window.clearTimeout(timerId);
+  }, [loadBoard]);
 
   const handleOpenModal = () => {
     // TODO: 비로그인 상태면 P-016 로그인 유도 모달 노출
@@ -277,15 +280,18 @@ export default function BoardDetailPage() {
   const handleConfirm = async () => {
     setSubmitting(true);
     try {
-      // const { chatRoomId } = await requestParticipation(boardId);
-      setChatRoomId(1); // navigate(...) 대신
+      const result = await requestParticipation(boardId);
+      setChatRoomId(result.chatRoomId);
+      setJoined(true);
       setModalOpen(false);
     } catch (e) {
-      setModalOpen(false);
+      if (e.status === 401) {
+        clearAuth();
+        navigate("/", { replace: true });
+        return;
+      }
       setErrorMessage(
-        e.status === 409
-          ? "이미 다른 식사에 참여요청을 했어요."
-          : "참여요청에 실패했어요. 잠시 후 다시 시도해주세요.",
+        t(e.message || "참여요청에 실패했어요. 잠시 후 다시 시도해주세요."),
       );
     } finally {
       setSubmitting(false);
@@ -296,7 +302,7 @@ export default function BoardDetailPage() {
     return (
       <div className="detail">
         <style>{css}</style>
-        <p className="detail__state">불러오는 중…</p>
+        <p className="detail__state">{t("불러오는 중...")}</p>
       </div>
     );
   }
@@ -306,9 +312,16 @@ export default function BoardDetailPage() {
       <div className="detail">
         <style>{css}</style>
         <div className="detail__state">
-          <p>게시글을 불러오지 못했어요.</p>
-          <button type="button" className="detail__retry" onClick={loadBoard}>
-            다시 시도
+          <p>{errorMessage || t("게시글을 불러오지 못했어요.")}</p>
+          <button
+            type="button"
+            className="detail__retry"
+            onClick={() => {
+              setStatus("loading");
+              loadBoard();
+            }}
+          >
+            {t("다시 시도")}
           </button>
         </div>
       </div>
@@ -323,7 +336,7 @@ export default function BoardDetailPage() {
         <button
           type="button"
           className="detail__back"
-          aria-label="뒤로 가기"
+          aria-label={t("뒤로 가기")}
           onClick={() => navigate(-1)}
         >
           <svg
@@ -345,34 +358,35 @@ export default function BoardDetailPage() {
           <button
             type="button"
             className="detail__edit"
-            onClick={() => navigate("/editBoard")}
+            onClick={() => navigate(`/editBoard/${board.boardId}`)}
           >
-            수정하기
+            {t("수정하기")}
           </button>
         )}
       </header>
 
       <main className="detail__main">
-        <span className="detail__category">{MOCK_BOARD.categoryName}</span>
-        <h1 className="detail__title">{MOCK_BOARD.title}</h1>
+        <span className="detail__category">{t(board.categoryName)}</span>
+        <h1 className="detail__title">{translatedBoard.texts[0]}</h1>
+        <TranslationNotice failed={translatedBoard.failed} hasContent />
 
-        <section className="detail__author" aria-label="작성자 정보">
+        <section className="detail__author" aria-label={t("작성자 정보")}>
           <div className="detail__avatar" aria-hidden="true">
-            {MOCK_BOARD.nickname?.charAt(0)}
+            {board.userNickname?.charAt(0)}
           </div>
           <div className="detail__author-text">
-            <span className="detail__nickname">{MOCK_BOARD.nickname}</span>
+            <span className="detail__nickname">{board.userNickname}</span>
             <span className="detail__meta">
-              {MOCK_BOARD.gender} / {MOCK_BOARD.age}세
+              {t(board.userLocal ? "현지인" : "여행객")}
             </span>
           </div>
         </section>
 
         <p className="detail__time">
-          작성일 {formatBoardTime(MOCK_BOARD.boardTime)}
+          {t("작성일 {date}", { date: formatBoardTime(board.boardTime, lang) })}
         </p>
         <hr className="detail__divider" />
-        <p className="detail__text">{MOCK_BOARD.boardText}</p>
+        <p className="detail__text">{translatedBoard.texts[1]}</p>
       </main>
 
       <footer className="detail__footer">
@@ -385,17 +399,17 @@ export default function BoardDetailPage() {
           type="button"
           className="detail__cta"
           onClick={handleOpenModal}
-          disabled={joined}
+          disabled={joined || isAuthor || submitting}
         >
-          {joined ? "참여요청 완료" : "참여요청"}
+          {t(isAuthor ? "내 모집글" : joined ? "참여요청 완료" : "참여요청")}
         </button>
       </footer>
 
       {modalOpen && (
         <ConfirmModal
-          title="참여요청을 하시겠습니까?"
-          message="참여요청을 하면 바로 매칭이 되어 채팅방이 생성됩니다. 그리고 다른 식사에 참여요청을 할 수 없게 됩니다."
-          confirmLabel="참여요청"
+          title={t("참여요청을 하시겠습니까?")}
+          message={t("참여요청을 하면 바로 매칭이 되어 채팅방이 생성됩니다. 그리고 다른 식사에 참여요청을 할 수 없게 됩니다.")}
+          confirmLabel={t("참여요청")}
           loading={submitting}
           onConfirm={handleConfirm}
           onCancel={() => setModalOpen(false)}

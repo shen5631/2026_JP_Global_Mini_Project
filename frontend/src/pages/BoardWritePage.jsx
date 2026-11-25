@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { createBoard } from "../api/board";
+import { fetchCategories } from "../api/match";
+import { useI18n } from "../i18n";
 
 const css = `
 .write {
@@ -66,6 +69,7 @@ const css = `
   font-size: 14px;
   font-weight: 700;
 }
+.write__error { margin: 0; color: #d33a2c; font-size: 13px; }
 
 /* 카테고리 */
 .write__chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -151,35 +155,54 @@ const css = `
 }
 `;
 
-// TODO: category 테이블에서 불러오기 (category_id, 이름)
-const CATEGORIES = [
-  { categoryId: 1, name: "한식" },
-  { categoryId: 2, name: "일식" },
-  { categoryId: 3, name: "중식" },
-  { categoryId: 4, name: "양식" },
-  { categoryId: 5, name: "카페·디저트" },
-  { categoryId: 6, name: "술집" },
-  { categoryId: 7, name: "기타" },
-];
-
 /**
  * P-007 모집 게시글 작성 화면
  * 라우트 예: <Route path="/boards/new" element={<BoardWritePage />} />
  */
 export default function BoardWritePage() {
   const navigate = useNavigate();
+  const { t } = useI18n();
+  const [categories, setCategories] = useState([]);
+  const [categoryError, setCategoryError] = useState("");
   const [categoryId, setCategoryId] = useState(null);
   const [title, setTitle] = useState("");
   const [boardText, setBoardText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const canSubmit = categoryId !== null && title.trim() && boardText.trim();
 
+  useEffect(() => {
+    let active = true;
+    fetchCategories()
+      .then((result) => {
+        if (active) setCategories(result.filter((item) => item.name !== "상관없음"));
+      })
+      .catch((e) => {
+        if (active) setCategoryError(t(e.message || "카테고리를 불러오지 못했어요."));
+      });
+    return () => {
+      active = false;
+    };
+  }, [t]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!canSubmit) return;
-    // TODO: POST /api/boards  { categoryId, title, boardText }
-    // board_id 는 AI, user_id 는 로그인 정보, board_time 은 서버에서 생성
-    navigate("/");
+    if (!canSubmit || submitting) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await createBoard({
+        categoryId,
+        title: title.trim(),
+        boardText: boardText.trim(),
+      });
+      navigate("/home", { replace: true });
+    } catch (e) {
+      setError(t(e.message || "모집글을 등록하지 못했어요."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -190,7 +213,7 @@ export default function BoardWritePage() {
         <button
           type="button"
           className="write__back"
-          aria-label="뒤로 가기"
+          aria-label={t("뒤로 가기")}
           onClick={() => navigate(-1)}
         >
           <svg
@@ -210,7 +233,7 @@ export default function BoardWritePage() {
         </button>
       </header>
 
-      <h1 className="write__heading">모집글 작성</h1>
+      <h1 className="write__heading">{t("모집글 작성")}</h1>
 
       <form className="write__form" id="write-form" onSubmit={handleSubmit}>
         <div
@@ -219,10 +242,11 @@ export default function BoardWritePage() {
           aria-labelledby="label-category"
         >
           <span className="write__label" id="label-category">
-            카테고리
+            {t("카테고리")}
           </span>
+          {categoryError && <p className="write__error" role="alert">{categoryError}</p>}
           <div className="write__chips">
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <button
                 key={c.categoryId}
                 type="button"
@@ -230,7 +254,7 @@ export default function BoardWritePage() {
                 aria-pressed={categoryId === c.categoryId}
                 onClick={() => setCategoryId(c.categoryId)}
               >
-                {c.name}
+                {t(c.name)}
               </button>
             ))}
           </div>
@@ -238,14 +262,14 @@ export default function BoardWritePage() {
 
         <div className="write__field">
           <label className="write__label" htmlFor="board-title">
-            제목
+            {t("제목")}
           </label>
           <input
             id="board-title"
             className="write__input"
             type="text"
             maxLength={50}
-            placeholder="제목을 입력해주세요"
+            placeholder={t("제목을 입력해주세요")}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -253,12 +277,12 @@ export default function BoardWritePage() {
 
         <div className="write__field">
           <label className="write__label" htmlFor="board-text">
-            상세 설명
+            {t("상세 설명")}
           </label>
           <textarea
             id="board-text"
             className="write__textarea"
-            placeholder="여행 일정, 가고 싶은 식당 등을 자유롭게 적어주세요"
+            placeholder={t("여행 일정, 가고 싶은 식당 등을 자유롭게 적어주세요")}
             value={boardText}
             onChange={(e) => setBoardText(e.target.value)}
           />
@@ -266,13 +290,14 @@ export default function BoardWritePage() {
       </form>
 
       <div className="write__footer">
+        {error && <p className="write__error" role="alert">{error}</p>}
         <button
           type="submit"
           form="write-form"
           className="write__submit"
-          disabled={!canSubmit}
+          disabled={!canSubmit || submitting || categories.length === 0}
         >
-          등록하기
+          {submitting ? t("등록 중...") : t("등록하기")}
         </button>
       </div>
     </div>

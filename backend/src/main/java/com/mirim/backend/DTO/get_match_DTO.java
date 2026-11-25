@@ -7,6 +7,8 @@ public record get_match_DTO(
         Integer chatRoomId,
         String categoryName,
         LocalDateTime matchLogTime,
+        String status,
+        Integer canceledByUserAi,
         Partner partner
 ){
     public record Partner(

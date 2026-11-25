@@ -31,6 +31,12 @@ public class Board_controller {
         return ResponseEntity.status(HttpStatus.OK).body(boardService.get_boards(categoryId, page, size));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<?> get_my_boards(@RequestHeader(value = "Authorization", required = false) String token){
+        User user = userService.get_user(token);
+        return ResponseEntity.status(HttpStatus.OK).body(boardService.get_my_boards(user));
+    }
+
     @GetMapping("/{boardId}")
     public ResponseEntity<?> get_board(@PathVariable int boardId){
         return ResponseEntity.status(HttpStatus.OK).body(boardService.get_board(boardId));

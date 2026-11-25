@@ -1,3 +1,5 @@
+import { useI18n } from "../i18n";
+
 const css = `
 .matched {
   --primary: #ee6c26;
@@ -78,6 +80,7 @@ const css = `
  * 닫기 버튼이 없어요. 채팅방 바로가기로만 나갈 수 있어요.
  */
 export default function MatchConfirmedModal({ onGoChat }) {
+  const { t } = useI18n();
   return (
     <div className="matched">
       <style>{css}</style>
@@ -102,15 +105,16 @@ export default function MatchConfirmedModal({ onGoChat }) {
           </svg>
         </div>
         <h2 id="matched-title" className="matched__title">
-          매칭이 완료되었습니다!
+          {t("매칭이 완료되었습니다!")}
         </h2>
         <p className="matched__message">
-          채팅방에서 함께 먹을 시간과 장소를 정해보세요.
+          {t("채팅방에서 함께 먹을 시간과 장소를 정해보세요.")}
         </p>
         <button type="button" className="matched__btn" onClick={onGoChat}>
-          채팅방 바로가기
+          {t("채팅방 바로가기")}
         </button>
       </div>
     </div>
   );
 }
+
