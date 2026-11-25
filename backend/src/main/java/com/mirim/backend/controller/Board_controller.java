@@ -67,7 +67,7 @@ public class Board_controller {
         return ResponseEntity.status(HttpStatus.OK).body(Map.of("message","삭제 완료"));
     }
 
-    @PostMapping("/{boardId}/join")
+    @PostMapping("/{boardId}/participation")
     public ResponseEntity<?> join_board(@RequestHeader(value = "Authorization", required = false) String token,
                                         @PathVariable int boardId){
         User user = userService.get_user(token);

@@ -4,7 +4,8 @@ import java.time.LocalDateTime;
 
 public record get_board_list_DTO(
         int boardId,
-        String userNickname,
+        String title,
+        String nickname,
         String categoryName,
         String title,
         String boardText,
